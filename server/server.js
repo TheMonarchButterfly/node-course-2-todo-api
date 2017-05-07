@@ -3,6 +3,7 @@
 // mongoose.Promise = global.Promise;
 // mongoose.connect('mongodb://localhost:27017/TodoApp');
 
+const _ = require('lodash');
 var express = require('express');
 var bodyParser = require('body-parser');  
 var {ObjectID} = require('mongodb');
@@ -58,6 +59,57 @@ Todo.findById(id).then((todo) => {
 // app.listen(3000, () => {
 //   console.log('Started on port 3000');
 // });
+
+app.delete('/todos/:id', (req, res) => {
+  // get the id
+  var id = req.params.id;
+  // validate the id -> not valid? return 404
+  if (!ObjectID.isValid(id)) {
+    return res.status(404).send();
+  }
+
+  Todo.findByIdAndRemove(id).then((todo) => {
+    if (!todo){
+      return res.status(404).send();
+    }
+
+    res.send(todo);
+  }).catch((e) => {
+    res.status(400).send();
+  });
+  //remove todo by id
+    // success
+      // if no doc, send 404
+      // if doc, send doc back 200
+    // error
+      // 400 with empty body
+});
+
+app.patch('/todos/:id', (req, res) => {
+  var id = req.params.id;
+  var body = _.pick(req.body, ['text', 'completed']);
+
+  if(!ObjectID.isValid(id)) {
+    return res.status(404).send();
+  }
+
+  if (_.isBoolean(body.completed) && body.completed) {
+    body.completedAt = new Date().getTime();
+  } else {
+    body.completed = false;
+    body.completedAt = null;   //clearing something from the database can just set it to be null
+
+  }
+
+  Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then((todo) => {
+    if (!todo) {
+      return res.status(404).send();
+    }
+    res.send({todo});
+  }).catch((e) => {
+    res.status(400).send();
+  })
+});
 
 app.listen(port, () => {
   console.log(`Started up at port ${port}`);
